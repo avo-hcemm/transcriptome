@@ -27,3 +27,10 @@ replay_pid*
 .classpath
 .project
 .settings/org.eclipse.core.resources.prefs
+/bin/
+/target/
+.settings/org.eclipse.jdt.core.prefs
+.settings/org.eclipse.m2e.core.prefs
+
+#folder
+data
