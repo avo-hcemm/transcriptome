@@ -12,18 +12,25 @@ public class Main {
         IntervalTree<Gene> geneTree = new IntervalTree<>();
         
         /* * SOD1 Gene (GRCh38 coordinates)
-         * Start: 31,659,666
-         * End: 31,668,931
          */
         int start = 31659666;
         int end = 31668931;
-        
         geneTree.put(start, end, new Gene("SOD1", start, end, false));
         
         // Adding RUNX1 to your gene tree
         start = 34787801;
         end = 35049334;
-        geneTree.put(start, end, new Gene("RUNX1", start, end, false));
+        geneTree.put(start, end, new Gene("RUNX1", start, end, true));
+        
+        // Adding TIAM1
+        start = 31118416;
+        end = 31559977;
+        geneTree.put(start, end, new Gene("TIAM1", start, end, true));
+        
+        //Adding ABCG1
+        start = 42241836;
+        end = 42338518;
+        geneTree.put(start, end, new Gene("ABCG1", start, end, false));
 
         String exampleBamFile = args[0];
         String chr = args[1];

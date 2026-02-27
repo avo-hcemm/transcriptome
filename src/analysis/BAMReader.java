@@ -4,33 +4,38 @@ import htsjdk.samtools.*;
 import htsjdk.samtools.util.IntervalTree;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
 import data.Gene;
+import data.Read;
 
 public class BAMReader {
 
     public static void processChromosome(File bamFile, String chr,
                                          IntervalTree<Gene> geneTree) throws Exception {
         SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
-        
+        System.out.println("Chr: " + chr);
+		
 		/*
 		 * SAMFileHeader header = reader.getFileHeader(); for (SAMSequenceRecord seq :
 		 * header.getSequenceDictionary().getSequences()) {
 		 * System.out.println(seq.getSequenceName()); }
 		 */
+		 
         
         SAMSequenceRecord seq = reader.getFileHeader().getSequence(chr);
         int chrLength = seq.getSequenceLength();
         
         SAMRecordIterator iter = reader.query(chr, 1, chrLength, false);
         
-        List<SAMRecord> plusReads = new ArrayList<>();
-        List<SAMRecord> minusReads = new ArrayList<>();
+        List<Read> plusTargetReads = new ArrayList<>();
+        List<Read> minusTargetReads = new ArrayList<>();
 
+        int readsCount = 0;
         while(iter.hasNext()) {
+        	readsCount ++;
             SAMRecord rec = iter.next();
             if(rec.getReadUnmappedFlag()) continue;
 
@@ -44,58 +49,67 @@ public class BAMReader {
             while(overlappingGenes.hasNext()) {
                 Gene gene = overlappingGenes.next().getValue();
 
-                // check strand match
+                // check strand match & assign target reads to the correct list
                 if(readStrand == gene.getStrand()) {
                 	if(readStrand) {
-                		minusReads.add(rec);
+                		minusTargetReads.add(initializeRead(rec));
                 	}else {
-                		plusReads.add(rec);
+                		plusTargetReads.add(initializeRead(rec));
                 	}
                     System.out.println("Read " + rec.getReadName() +
                                        " overlaps gene " + gene.getGeneId());
                 }
             }
         }
-
         iter.close();
         reader.close();
+        System.out.println("Read count:" + readsCount );
         
-        List<Integer> plusBeginnings = new ArrayList<>();
-        List<Integer> minusBeginnings = new ArrayList<>();
-        
-        for(SAMRecord read: plusReads) {
-        	plusBeginnings.add(getReadBeginning(read));
-        }
-        for(SAMRecord read: minusReads) {
-        	minusBeginnings.add(getReadBeginning(read));
-        }
-        Collections.sort(plusBeginnings);
-        int index = 0;
-        int window = 10;
-        for (int minusBegin : minusBeginnings) {
-	        // Find the first plus read that could overlap
-	        int firstIdx = Collections.binarySearch(plusBeginnings, minusBegin - window);
-	        if (firstIdx < 0) firstIdx = -firstIdx - 1;
-	
-	        // Find the last plus read that could overlap
-	        int lastIdx = Collections.binarySearch(plusBeginnings, minusBegin + window);
-	        if (lastIdx < 0) lastIdx = -lastIdx - 2; // -2 because it returns insertion point -1
-	
-	        // Slice the list
-	        List<Integer> candidatePlusReads = plusBeginnings.subList(firstIdx, lastIdx + 1);
-	        
-	        int idx = Collections.binarySearch(candidatePlusReads, minusBegin);
-	        if (idx >= 0) {
-	            System.out.println("Exact overlap at: " + minusBegin);
-	        }
-        }
+        minusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
+        plusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
+		/*
+		 * //nested loops for (Read minusRead : minusTargetReads) { int minusBegin =
+		 * minusRead.getReadStart(); for(Read plusRead: plusTargetReads){ int plusBegin
+		 * = plusRead.getReadStart(); int plusLength = plusRead.getReadLength();
+		 * if(minusBegin >= plusBegin && minusBegin <= plusLength)
+		 * System.out.println("Exact overlap at: " + minusBegin); } }
+		 */
+		  
+		  // advance indeces
+		  int i = 0, j = 0;
+		  int overlapCount = 0;
+		  System.out.println("Searching for overlaps");
+		  while (i < minusTargetReads.size() && j < plusTargetReads.size()) {
+			  Read minusTargetRead = minusTargetReads.get(i);
+			  Read plusTargetRead = plusTargetReads.get(j);
+			  
+			  int minusBegin = minusTargetRead.getReadStart();
+			  int minusEnd = minusBegin + minusTargetRead.getReadLength();
+			  int plusBegin = plusTargetRead.getReadStart(); 
+			  int plusEnd = plusBegin + plusTargetRead.getReadLength();
+			  
+			  if(minusBegin < plusEnd && minusEnd > plusBegin) { 
+				  int jj = j;
+				  while(jj < plusTargetReads.size() && plusTargetReads.get(jj).getReadStart() < minusEnd) {
+					  overlapCount ++; //overlap region
+					  System.out.println("Overlapping reads ( - strand): " + minusBegin);
+					  jj++;
+				  }
+				  i++;
+			  }else if(minusEnd < plusBegin){ 
+				  i ++; // next read on - strand
+			  }else if(minusBegin > plusEnd) {
+				  j++; // next read on + strand
+			  }
+		  }
+		  System.out.println("The program has terminated");
+		 
     }
     
-    private static int getReadBeginning(SAMRecord rec) {
-        if (rec.getReadNegativeStrandFlag()) {
-            return rec.getAlignmentEnd();   // minus strand
-        } else {
-            return rec.getAlignmentStart(); // plus strand
-        }
+    private static Read initializeRead(SAMRecord rec) {
+    	int start = rec.getAlignmentStart();
+    	int length = rec.getReadLength();
+        return new Read(start, length);
     }
+    
 }
