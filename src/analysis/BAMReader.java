@@ -13,7 +13,7 @@ import data.Read;
 
 public class BAMReader {
 
-    public static void processChromosome(File bamFile, String chr,
+    public static void processChromosome(File bamFile, String chr, int geneCount,
                                          IntervalTree<Gene> geneTree) throws Exception {
         SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
         System.out.println("Chr: " + chr);
@@ -23,7 +23,6 @@ public class BAMReader {
 		 * header.getSequenceDictionary().getSequences()) {
 		 * System.out.println(seq.getSequenceName()); }
 		 */
-		 
         
         SAMSequenceRecord seq = reader.getFileHeader().getSequence(chr);
         int chrLength = seq.getSequenceLength();
@@ -52,9 +51,9 @@ public class BAMReader {
                 // check strand match & assign target reads to the correct list
                 if(readStrand == gene.getStrand()) {
                 	if(readStrand) {
-                		minusTargetReads.add(initializeRead(rec));
-                	}else {
                 		plusTargetReads.add(initializeRead(rec));
+                	}else {
+                		minusTargetReads.add(initializeRead(rec));
                 	}
                     System.out.println("Read " + rec.getReadName() +
                                        " overlaps gene " + gene.getGeneId());
@@ -78,7 +77,7 @@ public class BAMReader {
 		  // advance indeces
 		  int i = 0, j = 0;
 		  int overlapCount = 0;
-		  System.out.println("Searching for overlaps");
+		  System.out.println("Overlapping reads:");
 		  while (i < minusTargetReads.size() && j < plusTargetReads.size()) {
 			  Read minusTargetRead = minusTargetReads.get(i);
 			  Read plusTargetRead = plusTargetReads.get(j);
@@ -92,7 +91,7 @@ public class BAMReader {
 				  int jj = j;
 				  while(jj < plusTargetReads.size() && plusTargetReads.get(jj).getReadStart() < minusEnd) {
 					  overlapCount ++; //overlap region
-					  System.out.println("Overlapping reads ( - strand): " + minusBegin);
+					  System.out.println("- strand: " + minusBegin + ", + strand: " + plusBegin);
 					  jj++;
 				  }
 				  i++;
@@ -102,6 +101,7 @@ public class BAMReader {
 				  j++; // next read on + strand
 			  }
 		  }
+		  System.out.println("Chromosome: "+chr+ " - Number of protein coding genes: "+geneCount+" - Number of overlaps: "+overlapCount);
 		  System.out.println("The program has terminated");
 		 
     }

@@ -1,41 +1,66 @@
 package task;
-import analysis.BAMReader;
-import data.Gene;
 
 import htsjdk.samtools.util.IntervalTree;
-import java.io.File;
+import java.io.File; 
+
+import analysis.BAMReader;
+import analysis.GTFIntervalTreeBuilder;
+import data.Gene;
+
 
 public class Main {
     public static void main(String[] args) throws Exception {
+    	
+    	String gtfFile = args[0];
+    	String exampleBamFile = args[1];
+        String chr = args[2];
+        
+       // List of chromosomes to process
+        String[] chromosomes = {
+            "1","2","3","4","5","6","7","8","9","10",
+            "11","12","13","14","15","16","17","18","19","20","21","22","X","Y"
+        };
 
-        // example: build geneTree for chr1
-        IntervalTree<Gene> geneTree = new IntervalTree<>();
         
-        /* * SOD1 Gene (GRCh38 coordinates)
-         */
-        int start = 31659666;
-        int end = 31668931;
-        geneTree.put(start, end, new Gene("SOD1", start, end, false));
-        
-        // Adding RUNX1 to your gene tree
-        start = 34787801;
-        end = 35049334;
-        geneTree.put(start, end, new Gene("RUNX1", start, end, true));
-        
-        // Adding TIAM1
-        start = 31118416;
-        end = 31559977;
-        geneTree.put(start, end, new Gene("TIAM1", start, end, true));
-        
-        //Adding ABCG1
-        start = 42241836;
-        end = 42338518;
-        geneTree.put(start, end, new Gene("ABCG1", start, end, false));
+    	GTFIntervalTreeBuilder builder = new GTFIntervalTreeBuilder();
+        builder.parseGTF(new File(gtfFile));
 
-        String exampleBamFile = args[0];
-        String chr = args[1];
+        // get interval tree for chromosome 21
+        IntervalTree<Gene> chrTree = builder.getTreeForChromosome(chr);
+        
         File bamFile = new File(exampleBamFile);
+        
+        if(chrTree == null) {
+        	System.out.println("Null gene tree. The porgram will exit");
+        	System.exit(0);
+        }
+        int geneCount = builder.getProteinCodingGenes(chr);
+        BAMReader.processChromosome(bamFile, chr, geneCount, chrTree);
+        
+        /*
+         * // Fixed thread pool: 6 threads for your 6-core CPU
+        ExecutorService executor = Executors.newFixedThreadPool(6);
 
-        BAMReader.processChromosome(bamFile, chr, geneTree);
+        for (String chr : chromosomes) {
+            IntervalTree<Gene> tree = builder.getTreeForChromosome(chr);
+            if (tree == null) continue; // skip chromosomes not in GTF
+
+            executor.submit(() -> {
+                try {
+                    BAMReader.processChromosome(bamFile, chr, tree);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+            Thread.sleep(1000); // wait for all threads to finish
+        }
+
+        System.out.println("All chromosomes processed.");
+    }
+         * */
     }
 }

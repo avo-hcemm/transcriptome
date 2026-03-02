@@ -1,0 +1,15 @@
+TranscriptomesAnalysis - Notes
+
+Workflow:
+Load protein_coding.gtf
+   ↓
+Build IntervalTree per chromosome
+   ↓
+Open BAM with SamReader
+   ↓
+For each read:
+    check overlap in interval tree
+    if overlaps → analyze
+
+1) only mapped reads
+2) Use indexed region queries to parallelize by chromosome	

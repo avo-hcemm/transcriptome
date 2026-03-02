@@ -4,7 +4,7 @@ public class Gene {
     private String geneId;
     private int start;
     private int end;
-    private boolean strand; // false = +, true = -
+    private boolean strand; // false = -, true = +
 
     public Gene(String geneId, int start, int end, boolean strand) {
         this.geneId = geneId;
