@@ -58,14 +58,24 @@ public class GTFIntervalTreeBuilder {
                     strand = false;
                 }
                 
-                // extract gene_id or gene_name
+                // extract gene_id
                 String geneId = "unknown";
- 
+                
                 int geneIdIndex = attributes.indexOf("gene_id \"");
                 if (geneIdIndex >= 0) {
                     int startIndex = geneIdIndex + 9;
                     int endIndex = attributes.indexOf("\"", startIndex);
                     geneId = attributes.substring(startIndex, endIndex);
+                }
+                
+                // extract gene_name
+                String geneName = "unknown";
+ 
+                int geneNameIndex = attributes.indexOf("gene_name \"");
+                if (geneNameIndex >= 0) {
+                    int startIndex = geneNameIndex + 11;
+                    int endIndex = attributes.indexOf("\"", startIndex);
+                    geneName = attributes.substring(startIndex, endIndex);
                 }
 
                 // initialize interval tree if absent
@@ -73,7 +83,7 @@ public class GTFIntervalTreeBuilder {
                 IntervalTree<Gene> tree = chromosomeTrees.get(chr);
 
                 // add interval
-                tree.put(start, end, new Gene(geneId, start, end, strand));
+                tree.put(start, end, new Gene(geneId, geneName, start, end, strand));
             }
         }
         System.out.println("GeneTree parsed");
