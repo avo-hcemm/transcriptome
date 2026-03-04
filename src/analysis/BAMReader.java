@@ -48,12 +48,12 @@ public class BAMReader {
             int readEnd   = rec.getAlignmentEnd();
             boolean readStrand = rec.getReadNegativeStrandFlag();// true for reverse strand, false for forward strand
 
-            Iterator<IntervalTree.Node<Gene>> overlappingGenes =
+            Iterator<IntervalTree.Node<Gene>> readsOverlappingGenes =
                     geneTree.overlappers(readStart, readEnd);
             
-            while(overlappingGenes.hasNext()) {
+            while(readsOverlappingGenes.hasNext()) {
             	
-                Gene gene = overlappingGenes.next().getValue();
+                Gene gene = readsOverlappingGenes.next().getValue();
 
                 // check strand match & assign target reads to the correct list
                 if(readStrand == gene.getStrand()) {
@@ -65,15 +65,14 @@ public class BAMReader {
 	            		plusTargetReads.add(initializeRead(rec,gene.getGeneName()));
 	            	}
 	                System.out.println("Read " + rec.getReadName() +
-                                       " overlaps gene " + gene.getGeneId() + gene.getGeneName());
+                                       " overlaps gene " + gene.getGeneId() +" : "+ gene.getGeneName());
                 }
             }
         }
         iter.close();
         reader.close();
-        System.out.println("Read count:" + readsCount );
-        System.out.println("Properly mapped reads count:" + readsProperlyMappedCount );
-        System.out.println("Mapped genes count:" + overlappingGenesCount+" overlapping gene set size:" +overlappingGenesSet.size());
+        System.out.println("Read count:" + readsCount + " -> Properly mapped reads count:" + readsProperlyMappedCount );
+        System.out.println("Mapped genes count:" + overlappingGenesCount+" -> Overlapping genes count:" +overlappingGenesSet.size());
         
         minusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
         plusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
