@@ -1,13 +1,15 @@
 package data;
 
+import java.util.HashSet;
+
 public class Read {
     private final int readStart;
     private final int readLength;
     private final String readName;
-    private final String geneName;
+    private final HashSet<String> overlappingGenes = new HashSet<>();
 
     public Read(int readStart, int readLength, String readName, String geneName) {
-    	this.geneName = geneName;
+    	this.overlappingGenes.add(geneName);
     	this.readName = readName;
         this.readStart = readStart;
         this.readLength = readLength;
@@ -25,17 +27,17 @@ public class Read {
         return readName;
     }
     
-    public String getGeneName() {
-        return geneName;
+    public HashSet<String> getGeneName() {
+        return overlappingGenes;
     }
     @Override
     public String toString() {
-    	int readEnd = readStart + readLength;
+    	int readEnd = this.readStart + this.readLength;
         return "Read{" +
-                "coordinates=(" + readStart +
+                "coordinates=(" + this.readStart +
                 ", " + readEnd +
-                "), name=" + readName +
-                "), gene=" + geneName +
+                "), name=" + this.readName +
+                "), genes=" + this.overlappingGenes +
                 '}';
     }
 }
