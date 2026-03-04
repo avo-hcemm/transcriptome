@@ -25,16 +25,16 @@ public class Main {
     	GTFIntervalTreeBuilder builder = new GTFIntervalTreeBuilder();
         builder.parseGTF(new File(gtfFile));
 
-        // get interval tree for chromosome 21
+        // get interval tree for input chromosome
         IntervalTree<Gene> chrTree = builder.getTreeForChromosome(chr);
         
-        File bamFile = new File(exampleBamFile);
-        
         if(chrTree == null) {
-        	System.out.println("Null gene tree. The porgram will exit");
+        	System.out.println("Null gene tree. The program will exit");
         	System.exit(0);
         }
         int geneCount = builder.getProteinCodingGenes(chr);
+        
+        File bamFile = new File(exampleBamFile);
         BAMReader.processChromosome(bamFile, chr, geneCount, chrTree);
         
         /*
