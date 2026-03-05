@@ -1,0 +1,4 @@
+# Read count (total): total number of reads in BAM file.
+# Properly mapped reads count: total number of mapped reads, excluding secondary or alternative alignments and alignments with map quality less than 20 (Phred score) 
+# Reads overlapping genes count: number of the aligned reads that overlap gene regions
+# Mapped genes count: number of unique genes overlapped by aligned reads.

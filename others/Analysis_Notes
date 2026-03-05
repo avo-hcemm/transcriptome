@@ -3,6 +3,9 @@
 				Sample:
 1) MDAMB231_199_mapped.sorted.bam: human breast cancer cell line
 
+				Data Preprocessing:
+Mapping with minimap2 ?
+
 				Workflow:
 Load protein_coding.gtf
    ↓
@@ -16,4 +19,5 @@ For each read:
 
 1) only mapped reads
 2) only primary alignments
+3) mapping quality above 20 (PHRED)
 3) Use indexed region queries to parallelize by chromosome	
