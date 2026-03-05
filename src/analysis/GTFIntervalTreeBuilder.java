@@ -86,7 +86,7 @@ public class GTFIntervalTreeBuilder {
                 tree.put(start, end, new Gene(geneId, geneName, start, end, strand));
             }
         }
-        System.out.println("GeneTree parsed");
+//        System.out.println("GeneTree parsed");
     }
 
     public IntervalTree<Gene> getTreeForChromosome(String chr) {

@@ -15,7 +15,7 @@ import data.Read;
 
 public class BAMReader {
 
-    public static void processChromosome(File bamFile, String chr, int geneCount,
+    public static int processChromosome(File bamFile, String chr,
                                          IntervalTree<Gene> geneTree) throws Exception {
 	    SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
 	    System.out.println("Chr: " + chr);
@@ -35,6 +35,9 @@ public class BAMReader {
         List<Read> minusTargetReads = new ArrayList<>();
 
         int readsCount = 0;
+        int readsUnmappedCount = 0;
+        int readsSecAlignCount = 0;
+        int readsLowMQCount = 0;
         int readsProperlyMappedCount = 0;
         int overlappingGenesCount = 0;
         Set<Gene> overlappingGenesSet = new HashSet<>();
@@ -42,7 +45,9 @@ public class BAMReader {
         while(iter.hasNext()) {
         	readsCount ++;
             SAMRecord rec = iter.next();
-            if(rec.getReadUnmappedFlag() || rec.isSecondaryOrSupplementary()) continue;
+            if(rec.getReadUnmappedFlag()) {readsUnmappedCount ++;continue;}
+            if(rec.isSecondaryOrSupplementary()) {readsSecAlignCount ++;continue;}
+            if (rec.getMappingQuality() < 20) { readsLowMQCount ++;continue;}
             readsProperlyMappedCount ++;
             int readStart = rec.getAlignmentStart();
             int readEnd   = rec.getAlignmentEnd();
@@ -71,16 +76,13 @@ public class BAMReader {
         }
         iter.close();
         reader.close();
-        System.out.println("Read count:" + readsCount + " -> Properly mapped reads count:" + readsProperlyMappedCount );
-        System.out.println("Mapped genes count:" + overlappingGenesCount+" -> Overlapping genes count:" +overlappingGenesSet.size());
         
         minusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
         plusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
 		
-		  
 		 // advance indeces
 		 int i = 0, j = 0;
-		 int overlapCount = 0;
+		 int overlappingReadsCount = 0;
 		 System.out.println("Overlapping reads:");
 		 while (i < minusTargetReads.size() && j < plusTargetReads.size()) {
 			 
@@ -95,7 +97,7 @@ public class BAMReader {
 			 if(minusBegin < plusEnd && minusEnd > plusBegin) { 
 				 int jj = j;
 				 while(jj < plusTargetReads.size() && plusTargetReads.get(jj).getReadStart() < minusEnd) {
-					 overlapCount ++; //overlap region
+					 overlappingReadsCount ++; //overlap region
 				 Read targetRead = plusTargetReads.get(jj);
 //				 System.out.println("- strand:"+minusTargetReadName+" (" + minusBegin +","+ minusEnd+ "), + strand:"+plusTargetReadName+" (" + plusBegin+","+ plusEnd+ ")");
 				 System.out.println("- "+minusTargetRead.toString()+", + "+targetRead.toString());
@@ -108,8 +110,16 @@ public class BAMReader {
 			 j++; // next read on + strand
 			 }
 		 }
-		 System.out.println("Chromosome: "+chr+ " - Number of protein coding genes: "+geneCount+" - Number of overlaps: "+overlapCount);
-		 System.out.println("The program has terminated"); 
+		 double prop = (double)readsProperlyMappedCount/(readsCount)*100.0;
+		 double prop2 = (double)readsUnmappedCount/(readsCount)*100.0;
+		 double prop3 = (double)readsSecAlignCount/(readsCount)*100.0;
+		 double prop4 = (double)readsLowMQCount/(readsCount)*100.0;
+		 System.out.printf("Total reads count: %1d -> Percentage of properly mapped reads: %.2f%n", readsCount ,prop);
+	     System.out.printf("Percentage of unmapped reads: %.2f | Percentage of secondary alignments: %.2f | Percentage of alignments with low mapping quality: %2f%n",
+	    		 prop2,prop3,prop4); 
+	     System.out.println("Reads overlapping genes count:" + overlappingGenesCount+" -> Unique overlapped genes count:" +overlappingGenesSet.size());
+	        
+		 return overlappingReadsCount; 
     }
     
     private static Read initializeRead(SAMRecord rec, String geneName) {

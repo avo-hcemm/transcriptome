@@ -35,8 +35,9 @@ public class Main {
         int geneCount = builder.getProteinCodingGenes(chr);
         
         File bamFile = new File(exampleBamFile);
-        BAMReader.processChromosome(bamFile, chr, geneCount, chrTree);
-        
+        int overlapCount = BAMReader.processChromosome(bamFile, chr, chrTree);
+        System.out.println("Chromosome: "+chr+ " | Number of protein coding genes: "+geneCount+" | Number of overlapping reads: "+overlapCount);
+		System.out.println("The program has terminated");
         /*
          * // Fixed thread pool: 6 threads for your 6-core CPU
         ExecutorService executor = Executors.newFixedThreadPool(6);
