@@ -15,7 +15,7 @@ import data.Read;
 
 public class BAMReader {
 
-    public static int processChromosome(File bamFile, String chr,
+    public static int[] processChromosome(File bamFile, String chr,
                                          IntervalTree<Gene> geneTree) throws Exception {
 	    SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
 	    System.out.println("Chr: " + chr);
@@ -114,12 +114,13 @@ public class BAMReader {
 		 double prop2 = (double)readsUnmappedCount/(readsCount)*100.0;
 		 double prop3 = (double)readsSecAlignCount/(readsCount)*100.0;
 		 double prop4 = (double)readsLowMQCount/(readsCount)*100.0;
-		 System.out.printf("Total reads count: %1d -> Percentage of properly mapped reads: %.2f%n", readsCount ,prop);
-	     System.out.printf("Percentage of unmapped reads: %.2f | Percentage of secondary alignments: %.2f | Percentage of alignments with low mapping quality: %2f%n",
+		 int overlapGeneSetSize = overlappingGenesSet.size();
+	     System.out.printf("Percentage of unmapped reads: %.2f%% | Percentage of secondary alignments: %.2f%% | Percentage of alignments with low mapping quality: %.2f%%%n",
 	    		 prop2,prop3,prop4); 
-	     System.out.println("Reads overlapping genes count:" + overlappingGenesCount+" -> Unique overlapped genes count:" +overlappingGenesSet.size());
+	     System.out.printf("Total reads: %1d -> Percentage of properly mapped reads: %.2f%% %n", readsCount ,prop);
+	     System.out.println("Reads overlapping protein-coding genes:" + overlappingGenesCount+" -> Unique overlapped genes:" +overlapGeneSetSize);
 	        
-		 return overlappingReadsCount; 
+		 return new int[] {overlapGeneSetSize, overlappingReadsCount}; 
     }
     
     private static Read initializeRead(SAMRecord rec, String geneName) {

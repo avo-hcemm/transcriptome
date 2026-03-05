@@ -53,9 +53,9 @@ public class GTFIntervalTreeBuilder {
                 Boolean strand = null;
                
                 if (strandStr.equals("+")) {
-                    strand = true;
-                } else if (strandStr.equals("-")) {
                     strand = false;
+                } else if (strandStr.equals("-")) {
+                    strand = true;
                 }
                 
                 // extract gene_id
