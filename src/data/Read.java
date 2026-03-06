@@ -30,6 +30,16 @@ public class Read {
     public HashSet<String> getGeneName() {
         return overlappingGenes;
     }
+    
+    public String toStringShort() {
+    	int readEnd = this.readStart + this.readLength;
+        return "Read{" +
+                "coordinates=(" + this.readStart +
+                ", " + readEnd +
+                "), name=" + this.readName +
+                "), genes=" + this.overlappingGenes +
+                '}';
+    }
     @Override
     public String toString() {
     	int readEnd = this.readStart + this.readLength;

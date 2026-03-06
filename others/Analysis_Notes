@@ -21,3 +21,6 @@ For each read:
 2) only primary alignments
 3) mapping quality above 20 (PHRED)
 3) Use indexed region queries to parallelize by chromosome	
+
+Comment:
+(06/03/206): reads may overlap not necessarily in regions of genes overlap.

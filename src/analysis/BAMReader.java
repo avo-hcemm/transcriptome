@@ -11,14 +11,15 @@ import java.util.List;
 import java.util.Set;
 
 import data.Gene;
+import data.Pair;
 import data.Read;
 
 public class BAMReader {
+final static private int MQuality = 10;
 
     public static int[] processChromosome(File bamFile, String chr,
                                          IntervalTree<Gene> geneTree) throws Exception {
 	    SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
-	    System.out.println("Chr: " + chr);
 		
 		/*
 		 * SAMFileHeader header = reader.getFileHeader(); for (SAMSequenceRecord seq :
@@ -47,7 +48,7 @@ public class BAMReader {
             SAMRecord rec = iter.next();
             if(rec.getReadUnmappedFlag()) {readsUnmappedCount ++;continue;}
             if(rec.isSecondaryOrSupplementary()) {readsSecAlignCount ++;continue;}
-            if (rec.getMappingQuality() < 20) { readsLowMQCount ++;continue;}
+            if (rec.getMappingQuality() < MQuality) { readsLowMQCount ++;continue;}
             readsProperlyMappedCount ++;
             int readStart = rec.getAlignmentStart();
             int readEnd   = rec.getAlignmentEnd();
@@ -79,10 +80,13 @@ public class BAMReader {
         
         minusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
         plusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
+        
+        HashSet<Pair<String, String>> pairedGenesSet = new  HashSet<Pair<String, String>>();
 		
 		 // advance indeces
 		 int i = 0, j = 0;
 		 int overlappingReadsCount = 0;
+		 int uniqueOverlappingReadsCount = 0;
 		 System.out.println("Overlapping reads:");
 		 while (i < minusTargetReads.size() && j < plusTargetReads.size()) {
 			 
@@ -95,30 +99,48 @@ public class BAMReader {
 			 int plusEnd = plusBegin + plusTargetRead.getReadLength();
 			  
 			 if(minusBegin < plusEnd && minusEnd > plusBegin) { 
+				 
+				 //long table of overlapping read pairs
 				 int jj = j;
+				 /* Overlapping region scan */
 				 while(jj < plusTargetReads.size() && plusTargetReads.get(jj).getReadStart() < minusEnd) {
+					 Read mateTargetRead = plusTargetReads.get(jj);
+					 int mateBegin = mateTargetRead.getReadStart();
+					 int mateEnd = mateBegin + mateTargetRead.getReadLength();
+					 int overlapStart = Math.max(minusTargetRead.getReadStart(), mateBegin);
+					 int overlapEnd = Math.min(minusTargetRead.getReadStart() + minusTargetRead.getReadLength(), mateEnd);
 					 overlappingReadsCount ++; //overlap region
-				 Read targetRead = plusTargetReads.get(jj);
-//				 System.out.println("- strand:"+minusTargetReadName+" (" + minusBegin +","+ minusEnd+ "), + strand:"+plusTargetReadName+" (" + plusBegin+","+ plusEnd+ ")");
-				 System.out.println("- "+minusTargetRead.toString()+", + "+targetRead.toString());
-				 jj++;
-			 }
+					 System.out.println("- "+minusTargetRead.toString()+", + "+mateTargetRead.toString());
+					 //gene pairs
+					 Iterator<IntervalTree.Node<Gene>> newReadsOverlappingGenes =
+			                    geneTree.overlappers(overlapStart, overlapEnd);
+					 
+					  initializeNewPairs(newReadsOverlappingGenes, pairedGenesSet);
+					 jj++;
+				 }
+				 /* Overlapping region end */
 			 i++;
-		 }else if(minusEnd < plusBegin){ 
-			 i ++; // next read on - strand
-		 }else if(minusBegin > plusEnd) {
-			 j++; // next read on + strand
+			 }else if(minusEnd <= plusBegin){ 
+				 i ++; // next read on - strand
+			 }else{
+				 j++; // next read on + strand
 			 }
 		 }
+		 System.out.printf("Paired read-overlapping genes: %n");
+		 for(Pair<String,String> pair: pairedGenesSet) {
+			 uniqueOverlappingReadsCount ++;
+			 System.out.println("- "+pair.getFirst()+", + "+pair.getSecond());
+		 }
+		 System.out.println("Number of unique reads overlaps: "+ uniqueOverlappingReadsCount);
 		 double prop = (double)readsProperlyMappedCount/(readsCount)*100.0;
 		 double prop2 = (double)readsUnmappedCount/(readsCount)*100.0;
 		 double prop3 = (double)readsSecAlignCount/(readsCount)*100.0;
 		 double prop4 = (double)readsLowMQCount/(readsCount)*100.0;
 		 int overlapGeneSetSize = overlappingGenesSet.size();
-	     System.out.printf("Percentage of unmapped reads: %.2f%% | Percentage of secondary alignments: %.2f%% | Percentage of alignments with low mapping quality: %.2f%%%n",
+	     System.out.printf("Unmapped reads: %.2f%% %nSecondary/alternative alignments: %.2f%% %nAlignments with low mapping quality: %.2f%%%n",
 	    		 prop2,prop3,prop4); 
 	     System.out.printf("Total reads: %1d -> Percentage of properly mapped reads: %.2f%% %n", readsCount ,prop);
-	     System.out.println("Reads overlapping protein-coding genes:" + overlappingGenesCount+" -> Unique overlapped genes:" +overlapGeneSetSize);
+	     System.out.println("Protein-coding genes overlapping reads :" + overlappingGenesCount+" -> Unique overlapped genes:" +overlapGeneSetSize);
 	        
 		 return new int[] {overlapGeneSetSize, overlappingReadsCount}; 
     }
@@ -130,4 +152,74 @@ public class BAMReader {
         return new Read(start, length, readName, geneName);
     }
     
+//    private static void initializePairs(Iterator<IntervalTree.Node<Gene>> Genes, HashSet<Pair<String, String>> processedPairs) {
+//    	Pair<String, String> pair = new Pair<String, String>();
+//    	while(Genes.hasNext()) {
+//    		Gene gene = Genes.next().getValue();
+//	    	if(!pair.isComplete()){
+//	    		if(!gene.getStrand())
+//	            	pair.setSecond(gene.getGeneName());// + strand
+//	    		 else
+//	    			 pair.setFirst(gene.getGeneName());// - strand
+//			 }else{
+//				 processedPairs.add(pair);
+//				 pair = new Pair<String, String>();
+//				 if(!gene.getStrand())
+//				    	pair.setSecond(gene.getGeneName());// + strand
+//				 else
+//					 pair.setFirst(gene.getGeneName());// - strand
+//			 }
+//    	}
+//    	 if(pair.isComplete())
+//    		 processedPairs.add(pair);
+//    }
+    
+    private static void initializeNewPairs(Iterator<IntervalTree.Node<Gene>> Genes, HashSet<Pair<String, String>> pairSet) {
+    	ArrayList<String> minusGenes = new ArrayList<>();
+    	ArrayList<String> plusGenes = new ArrayList<>();
+    	while(Genes.hasNext()) {
+    		Gene gene = Genes.next().getValue();
+    		boolean strand = gene.getStrand();
+    		String geneName = gene.getGeneName();
+    		if(strand)
+    			minusGenes.add(geneName);
+    		else
+    			plusGenes.add(geneName);
+    	}
+    	
+    	if(minusGenes.isEmpty() || plusGenes.isEmpty()) return; 
+    	
+//    	int minSize = Math.min(minusGenes.size(),plusGenes.size());
+//    	int maxSize = Math.max(minusGenes.size(),plusGenes.size());
+//    	for(int i=0; i < minSize; i++ ) {
+//    		for(int ii=0; ii < minSize; ii++) {
+//	    		Pair<String, String> pair = new Pair<String, String>();
+//	    		pair.setFirst(minusGenes.get(i));
+//	    		pair.setSecond(plusGenes.get(ii));
+//	    		if(pair.isComplete()) pairSet.add(pair);
+//    		}
+//    	}
+//    	
+//    	for(int j=minSize; j< maxSize; j++) {
+//    		for(int jj=0; jj < minSize; jj++) {
+//	    		Pair<String, String> pair = new Pair<String, String>();
+//	    		if(minusGenes.size()<plusGenes.size()) {
+//	    			pair.setFirst(minusGenes.get(jj));
+//	    			pair.setSecond(plusGenes.get(j));
+//	    		}else {
+//	    			pair.setFirst(minusGenes.get(j));
+//	    			pair.setSecond(plusGenes.get(jj));
+//	    		}
+//	    		if(pair.isComplete()) pairSet.add(pair);
+//    		}
+//    	}
+    	for(String minus : minusGenes){
+	        for(String plus : plusGenes){
+	            Pair<String,String> pair = new Pair<>();
+	            pair.setFirst(minus);
+	            pair.setSecond(plus);
+	            pairSet.add(pair);
+	        }
+    	}
+    }
 }
