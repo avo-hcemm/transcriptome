@@ -14,7 +14,7 @@ import data.Gene;
 public class GTFIntervalTreeBuilder {
 
     // Map chromosome -> interval tree
-    private final Map<String, IntervalTree<Gene>> chromosomeTrees = new HashMap<>();
+    private final Map<String, IntervalTree<Gene>> chromosomeGenomeTrees = new HashMap<>();
 
     public void parseGTF(File gtfFile) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(gtfFile),16 * 1024 * 1024)) {
@@ -79,8 +79,8 @@ public class GTFIntervalTreeBuilder {
                 }
 
                 // initialize interval tree if absent
-                chromosomeTrees.putIfAbsent(chr, new IntervalTree<>());
-                IntervalTree<Gene> tree = chromosomeTrees.get(chr);
+                chromosomeGenomeTrees.putIfAbsent(chr, new IntervalTree<>());
+                IntervalTree<Gene> tree = chromosomeGenomeTrees.get(chr);
 
                 // add interval
                 tree.put(start, end, new Gene(geneId, geneName, start, end, strand));
@@ -90,12 +90,12 @@ public class GTFIntervalTreeBuilder {
     }
 
     public IntervalTree<Gene> getTreeForChromosome(String chr) {
-        return chromosomeTrees.get(chr);
+        return chromosomeGenomeTrees.get(chr);
     }
     
     public int getProteinCodingGenes(String chr) {
-    	IntervalTree<Gene> tree = chromosomeTrees.get(chr);
+    	IntervalTree<Gene> tree = chromosomeGenomeTrees.get(chr);
     	if(tree == null) return 0;
-        return chromosomeTrees.get(chr).size();
+        return chromosomeGenomeTrees.get(chr).size();
     }
 }
