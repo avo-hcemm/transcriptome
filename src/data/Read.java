@@ -3,13 +3,22 @@ package data;
 import java.util.HashSet;
 
 public class Read {
+	private final String chromosome;
     private final int readStart;
     private final int readLength;
     private final String readName;
     private final HashSet<String> overlappingGenes = new HashSet<>();
 
-    public Read(int readStart, int readLength, String readName, String geneName) {
+    public Read(String chromosome, int readStart, int readLength, String readName, String geneName) {
+    	this.chromosome = chromosome;
     	this.overlappingGenes.add(geneName);
+    	this.readName = readName;
+        this.readStart = readStart;
+        this.readLength = readLength;
+    }
+    
+    public Read(String chromosome, int readStart, int readLength, String readName) {
+    	this.chromosome = chromosome;
     	this.readName = readName;
         this.readStart = readStart;
         this.readLength = readLength;
@@ -29,6 +38,14 @@ public class Read {
     
     public HashSet<String> getGeneName() {
         return overlappingGenes;
+    }
+    
+    public void addGene(String geneName) {
+    	this.overlappingGenes.add(geneName);
+    }
+    
+    public String getChromosome() {
+    	return this.chromosome;
     }
     
     public String toStringShort() {
