@@ -1,5 +1,6 @@
 #Random files
 *.gtf
+*.txt
 
 # Compiled class file
 *.class
@@ -38,3 +39,4 @@ replay_pid*
 #folder
 /data/
 /bin/
+/src/analysis/old/

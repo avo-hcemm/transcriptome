@@ -90,7 +90,9 @@ final static private int MQuality = 10;
         minusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
         plusTargetReads.sort(Comparator.comparingInt(Read::getReadStart));
         
-        HashSet<Pair<String, String>> pairedGenesSet = new  HashSet<Pair<String, String>>();
+//        Pair<Map<String,HashSet<String>>,Map<String, HashSet<String>>> pairedGenesSet = new  Pair<Map<String,HashSet<String>>,Map<String, HashSet<String>>>();
+        List<Pair<String,HashSet<String>>> overlapGenesMinus = new ArrayList<>();
+        List<Pair<String, HashSet<String>>> overlapGenesPlus = new ArrayList<>();
         boolean pairedGenesFound = false;
 		
 		 // advance indeces
@@ -103,10 +105,12 @@ final static private int MQuality = 10;
 			 Read minusTargetRead = minusTargetReads.get(i);
 			 int minusBegin = minusTargetRead.getReadStart();
 			 int minusEnd = minusBegin + minusTargetRead.getReadLength();
+			 String minusName = minusTargetRead.getReadName();
 
 			 Read plusTargetRead = plusTargetReads.get(j);
 			 int plusBegin = plusTargetRead.getReadStart(); 
 			 int plusEnd = plusBegin + plusTargetRead.getReadLength();
+			 String plusName = plusTargetRead.getReadName();
 			  
 			 if(minusBegin < plusEnd && minusEnd > plusBegin) { 
 				 
@@ -117,6 +121,10 @@ final static private int MQuality = 10;
 					 Read mateTargetRead = plusTargetReads.get(jj);
 					 int mateBegin = mateTargetRead.getReadStart();
 					 int mateEnd = mateBegin + mateTargetRead.getReadLength();
+					 String mateName = mateTargetRead.getReadName();
+					 /*DEBUG*/
+//						 System.out.println("MATENAME: "+mateName);
+					 /**/
 					 int overlapStart = Math.max(minusBegin, mateBegin);
 					 int overlapEnd = Math.min(minusEnd, mateEnd);
 					 String type = null;
@@ -135,13 +143,15 @@ final static private int MQuality = 10;
 					 }
 					 overlappingReadsCount ++; //overlap region
 					
-					 System.out.println("[ "+overlapStart+", "+overlapEnd+"], OverlapType:"+type+" Strand:- "+minusTargetRead.toString()+", Strand:+ "+mateTargetRead.toString());
-					 //validating the actual gene pairs
-					 Iterator<IntervalTree.Node<Gene>> newReadsOverlappingGenes =
-			                    geneTree.overlappers(overlapStart, overlapEnd);
+					 System.out.println("[ "+overlapStart+", "+overlapEnd+"], "+type+", - , "+minusTargetRead.toString()+", + , "+mateTargetRead.toString());
+					 //validating the actual overlapping gene pairs
+					 Iterator<IntervalTree.Node<Gene>> readsOverlapWithGenes = geneTree.overlappers(overlapStart, overlapEnd);
 					 
-					 pairedGenesFound = initializeNewPairs(newReadsOverlappingGenes, pairedGenesSet);
-//					 if(pairedGenesFound) printNewPairs(overlapStart, overlapEnd, pairedGenesSet);
+					 pairedGenesFound = initializeNewGenePairs(readsOverlapWithGenes, overlapGenesMinus, overlapGenesPlus, minusName, mateName);
+					 /*DEBUG*/
+//					 for(Pair<String, HashSet<String>> p: overlapGenesPlus)
+//						 System.out.println("DEBUG: "+p.getSecond());
+					 /**/
 					 jj++;
 				 }
 				 /* Overlapping region end */
@@ -153,11 +163,9 @@ final static private int MQuality = 10;
 			 }
 		 }
 		 System.out.printf("Read-covered overlapping genes: %n");
-		 for(Pair<String,String> pair: pairedGenesSet) {
-			 uniqueOverlappingReadsCount ++;
-			 System.out.println("- "+pair.getFirst()+", + "+pair.getSecond());
-		 }
-		 System.out.println("Number of unique reads read-overlapping genes: "+ uniqueOverlappingReadsCount);
+		 uniqueOverlappingReadsCount = printGenesReadCount(overlapGenesMinus, overlapGenesPlus);
+		 
+		 System.out.println("Number of unique read-covered overlapping genes: "+ uniqueOverlappingReadsCount);
 		 double prop = (double)readsProperlyMappedCount/(readsCount)*100.0;
 		 double prop2 = (double)readsUnmappedCount/(readsCount)*100.0;
 		 double prop3 = (double)readsSecAlignCount/(readsCount)*100.0;
@@ -183,43 +191,101 @@ final static private int MQuality = 10;
     	return  read;
     }
     
-    private static boolean initializeNewPairs(Iterator<IntervalTree.Node<Gene>> Genes, HashSet<Pair<String, String>> overlapGenePairs) {
-    	ArrayList<Pair<String, Integer>> minusGenes = new ArrayList<Pair<String, Integer>>();
-    	ArrayList<Pair<String, Integer>> plusGenes = new ArrayList<Pair<String, Integer>>();
+    private static boolean initializeNewGenePairs(Iterator<IntervalTree.Node<Gene>> Genes, List<Pair<String,HashSet<String>>> overlapGenesMinus, List<Pair<String, HashSet<String>>> overlapGenesPlus,
+    		String minusReadName, String plusReadName) {
+    	ArrayList<String> minusGenes = new ArrayList<String>();
+    	ArrayList<String> plusGenes = new ArrayList<String>();
     	while(Genes.hasNext()) {
     		Gene gene = Genes.next().getValue();
     		boolean strand = gene.getStrand();
     		String geneName = gene.getGeneName();
-    		int geneStart = gene.getStart();
-    		Pair<String, Integer> pair = new Pair<String, Integer>();
-    		pair.setFirst(geneName);
-    		pair.setSecond(geneStart);
     		if(strand)
-    			minusGenes.add(pair);
+    			minusGenes.add(geneName);
     		else
-    			plusGenes.add(pair);
+    			plusGenes.add(geneName);
     	}
     	
     	if(minusGenes.isEmpty() || plusGenes.isEmpty()) return false; 
-    	
 
-    	for(Pair<String, Integer> minusPair : minusGenes){
-    		String minusName = minusPair.getFirst();
-	        for(Pair<String, Integer> plusPair : plusGenes){
-	        	String plusName = plusPair.getFirst();
-	            Pair<String,String> pair = new Pair<>();
-	            pair.setFirst(minusName);
-	            pair.setSecond(plusName);
-	            overlapGenePairs.add(pair);
+    	for(String plusGene : plusGenes){
+	        for(String minusGene : minusGenes){
+	        	if(!updateGenePair(overlapGenesMinus, minusGene, minusReadName, overlapGenesPlus, plusGene, plusReadName)) {
+	        		
+		        	Pair<String,HashSet<String>> minusPair = new Pair<String,HashSet<String>>();
+	        		HashSet<String> minusSet = new HashSet<>();
+	        		minusSet.add(minusReadName);
+	        		minusPair.setFirst(minusGene);
+	        		minusPair.setSecond(minusSet);
+	        		overlapGenesMinus.add(minusPair);
+	        		
+	        		Pair<String,HashSet<String>> plusPair = new Pair<String,HashSet<String>>();
+	        		HashSet<String> plusSet = new HashSet<>();
+	        		plusSet.add(plusReadName);
+//	        		if(plusGene.equals("NCAPH2")) //DEBUG
+//	        			System.out.println("plusSet:"+plusSet); //DEBUG
+	        		plusPair.setFirst(plusGene);
+	        		plusPair.setSecond(plusSet);
+	        		overlapGenesPlus.add(plusPair);
+	        	}
 	        }
     	}
     	return true;
     }
-    private static void printNewPairs(int intervalStart, int intervalEnd, HashSet<Pair<String, String>> pairSet) {
-    	System.out.println("[ "+intervalStart+", "+intervalEnd+"]");
-    	for(Pair<String, String> p : pairSet) {
-    		System.out.println("- "+p.getFirst()+", + "+p.getSecond());
+//    private static void printNewPairs(int intervalStart, int intervalEnd, HashSet<Pair<String, String>> pairSet) {
+//    	System.out.println("[ "+intervalStart+", "+intervalEnd+"]");
+//    	for(Pair<String, String> p : pairSet) {
+//    		System.out.println("- "+p.getFirst()+", + "+p.getSecond());
+//    	}
+//    	
+//    }
+    private static boolean containsGenePair(List<Pair<String,HashSet<String>>> overlapGenesMinus, String geneMinus, List<Pair<String,HashSet<String>>> overlapGenesPlus, String genePlus) {
+    	if(overlapGenesMinus.size() != overlapGenesPlus.size()) {
+			 System.out.println("Paired of overlapping genes not correctly set.");
+			 System.exit(1);
+		 }
+    	int size = overlapGenesMinus.size();
+    	for(int i = 0; i < size; i ++) {
+    		Pair<String,HashSet<String>> minusPair = overlapGenesMinus.get(i);
+    		Pair<String,HashSet<String>> plusPair = overlapGenesPlus.get(i);
+    		if(geneMinus.equals(minusPair.getFirst()) && genePlus.equals(plusPair.getFirst()))
+    			return true;
     	}
+    	return false;
+    }
+    
+    private static boolean updateGenePair(List<Pair<String,HashSet<String>>> overlapGenesMinus, String geneMinus, String readMinus,
+    		List<Pair<String,HashSet<String>>> overlapGenesPlus, String genePlus, String readPlus) {
+    	if(overlapGenesMinus.size() != overlapGenesPlus.size()) {
+			 System.out.println("Paired of overlapping genes not correctly set.");
+			 System.exit(1);
+		 }
     	
+    	int size = overlapGenesMinus.size();
+    	for(int i = 0; i < size; i ++) {
+    		Pair<String,HashSet<String>> minusPair = overlapGenesMinus.get(i);
+    		Pair<String,HashSet<String>> plusPair = overlapGenesPlus.get(i);
+    		if(geneMinus.equals(minusPair.getFirst()) && genePlus.equals(plusPair.getFirst())) {
+    			minusPair.getSecond().add(readMinus);
+    			plusPair.getSecond().add(readPlus);
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    private static int printGenesReadCount(List<Pair<String,HashSet<String>>> overlapGenesMinus, List<Pair<String,HashSet<String>>> overlapGenesPlus) {
+    	if(overlapGenesMinus.size() != overlapGenesPlus.size()) {
+			 System.out.println("Pairs of overlapping genes not correctly set.");
+			 System.exit(1);
+		 }
+    	int size = overlapGenesMinus.size();
+
+    	// pairing genes on different strands along with the corresponding number of reads supporting the specific overlap
+    	for(int i = 0; i < size; i ++) {
+    		Pair<String,HashSet<String>> minusPair = overlapGenesMinus.get(i);
+    		Pair<String,HashSet<String>> plusPair = overlapGenesPlus.get(i);
+    		System.out.println("- "+minusPair.getFirst()+" ("+minusPair.getSecond().size()+"), + "+plusPair.getFirst()+" ("+plusPair.getSecond().size()+")");
+//    		System.out.println(plusPair.getSecond());//DEBUG
+    	}
+    	return size;
     }
 }

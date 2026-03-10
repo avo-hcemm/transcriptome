@@ -60,7 +60,7 @@ public class Read {
     @Override
     public String toString() {
     	int readEnd = this.readStart + this.readLength;
-        return "Read{" +
+        return "{" +
                 "coordinates=(" + this.readStart +
                 ", " + readEnd +
                 "), name=" + this.readName +

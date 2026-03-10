@@ -1,7 +1,10 @@
 package task;
 
 import htsjdk.samtools.util.IntervalTree;
-import java.io.File; 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import analysis.BAMReader;
 import analysis.GTFIntervalTreeBuilder;
@@ -15,12 +18,24 @@ public class Main {
     	String exampleBamFile = args[1];
         String chr = args[2];
         
-       // List of chromosomes to process
-        String[] chromosomes = {
-            "1","2","3","4","5","6","7","8","9","10",
-            "11","12","13","14","15","16","17","18","19","20","21","22","X","Y"
-        };
+        List<String> chrList = new ArrayList<>();
 
+        // Default list of human chromosomes if no arguments
+        List<String> allHumanChromosomes = Arrays.asList(
+            "1","2","3","4","5","6","7","8","9","10",
+            "11","12","13","14","15","16","17","18","19","20",
+            "21","22","X","Y","MT"
+        );
+
+        if (args.length <= 2) {
+            // Use default chromosomes if no additional arguments
+            chrList.addAll(allHumanChromosomes);
+        } else {
+            // From the 3rd argument onward, add chromosome names to the list
+            for (int i = 2; i < args.length; i++) {
+                chrList.add(args[i]);
+            }
+        }
         
     	GTFIntervalTreeBuilder builder = new GTFIntervalTreeBuilder();
         builder.parseGTF(new File(gtfFile));
