@@ -19,8 +19,7 @@ import data.Read;
 public class BAMReader {
 final static private int MQuality = 10;
 
-    public static int[] processChromosome(File bamFile, String chr,
-                                         IntervalTree<Gene> geneTree) throws Exception {
+    public static int[] processChromosome(File bamFile, String chr, IntervalTree<Gene> geneTree) throws Exception {
 	    SamReader reader = SamReaderFactory.makeDefault().open(bamFile);
 		
 		/*
